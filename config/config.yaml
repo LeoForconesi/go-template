@@ -1,0 +1,18 @@
+app:
+  env: dev
+
+http:
+  port: ":8080"
+
+postgres:
+  dsn: "host=postgres port=5432 user=app password=app dbname=appdb sslmode=disable TimeZone=UTC"
+
+kafka:
+  brokers:
+    - redpanda:9092
+  topicUsersCreated: "users.created"
+
+rabbit:
+  url: "amqp://guest:guest@rabbitmq:5672/"
+  queue: "user.notify"
+  ttlms: 60000
