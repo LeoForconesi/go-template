@@ -1,0 +1,17 @@
+app:
+  env: "dev"
+
+http:
+  port: ":8080"
+
+postgres:
+  dsn: ""
+
+kafka:
+  brokers: []
+  topicUsersCreated: "users.created"
+
+rabbit:
+  url: ""
+  queue: "user.notify"
+  ttlms: 60000
