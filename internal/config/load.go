@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
-	"strings"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -12,39 +12,40 @@ func Load() (App, error) {
 	var cfg App
 
 	v := viper.New()
+	v.SetConfigType("yaml")
 
-	// fuentes de configuración
-	v.SetConfigName("config")   // busca config.yaml, config.yml, config.env
-	v.AddConfigPath(".")        // raíz del proyecto
-	v.AddConfigPath("./config") // o dentro de /config
-	v.SetConfigType("yaml")     // tipo principal
-	v.SetConfigType("env")      // Soporta tambien .env
-	v.SetConfigName(".env")
-	v.AddConfigPath(".")
-	_ = v.MergeInConfig() // mergea si existe
-
-	// Permitir variables de entorno (sobrescriben todo)
-	v.AutomaticEnv()
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // ejemplo: APP.ENV → APP_ENV
-
-	// Defaults
-	v.SetDefault("app.env", "dev")
+	// Defaults globales (última red de seguridad)
+	v.SetDefault("app.env", "local")
 	v.SetDefault("http.port", ":8080")
-	v.SetDefault("postgres.dsn", "host=postgres port=5432 user=app password=app dbname=appdb sslmode=disable TimeZone=UTC")
-	v.SetDefault("kafka.brokers", []string{"redpanda:9092"})
+	v.SetDefault("postgres.dsn", "host=localhost port=5432 user=app password=app dbname=appdb sslmode=disable TimeZone=UTC")
+	v.SetDefault("kafka.brokers", []string{"localhost:19092"})
 	v.SetDefault("kafka.topicUsersCreated", "users.created")
-	v.SetDefault("rabbit.url", "amqp://guest:guest@rabbitmq:5672/")
+	v.SetDefault("rabbit.url", "amqp://guest:guest@localhost:5672/")
 	v.SetDefault("rabbit.queue", "user.notify")
 	v.SetDefault("rabbit.ttlms", 60000)
 
-	// Intentar leer config.yaml (no falla si no existe)
-	if err := v.ReadInConfig(); err == nil {
-		log.Printf("config loaded from: %s", v.ConfigFileUsed())
+	v.AddConfigPath(".")
+	v.AddConfigPath("./config")
+
+	v.SetConfigName("config")
+	if err := v.ReadInConfig(); err != nil {
+		return App{}, fmt.Errorf("load base config.yaml: %w", err)
+	}
+	log.Printf("base config loaded from: %s", v.ConfigFileUsed())
+
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = "local"
+	}
+	envFile := "config." + env
+	v.SetConfigName(envFile)
+
+	if err := v.MergeInConfig(); err != nil {
+		log.Printf("no %s.yaml found (using only base + defaults): %v", envFile, err)
 	} else {
-		log.Printf("no config.yaml found (using defaults/env): %v", err)
+		log.Printf("env config loaded from: %s.yaml", envFile)
 	}
 
-	// Mapear valores al struct principal
 	if err := v.Unmarshal(&cfg); err != nil {
 		return App{}, fmt.Errorf("config unmarshal: %w", err)
 	}

@@ -94,13 +94,11 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
-    env_file:
-      - config/.env
+    environment:
+      - APP_ENV=docker
     ports:
       - "8080:8080"
-    command: ["postgres:5432", "redpanda:9092", "rabbitmq:5672", "--", "/app/api"]
-    volumes:
-      - ./scripts/wait-for.sh:/wait-for.sh:ro
+    command: ["/app/api"]
 
 volumes:
   pgdata:
