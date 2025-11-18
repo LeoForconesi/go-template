@@ -25,8 +25,12 @@ go.work
 go.work.sum
 
 # env file
-config/.env
+config/*
 
 # Editor/IDE
 .idea/
 .vscode/
+
+.git/
+.DS_Store
+
