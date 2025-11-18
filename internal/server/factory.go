@@ -1,9 +1,11 @@
 package server
 
 import (
+	"net/http"
+
+	"github.com/LeonardoForconesi/go-template/internal/server/middleware"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"net/http"
 
 	"github.com/LeonardoForconesi/go-template/internal/config"
 	"github.com/LeonardoForconesi/go-template/pkg/logger"
@@ -38,6 +40,14 @@ func Build(cfg config.App) (*App, error) {
 		return nil, err
 	}
 
+	authMW, err := middleware.NewAuthMiddleware(middleware.AuthConfig{
+		Domain:   cfg.Auth.Domain,
+		Audience: cfg.Auth.Audience,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	// Producers genéricos
 	kp, err := kafkagen.NewProducer(log, cfg.Kafka.Brokers)
 	if err != nil {
@@ -48,14 +58,14 @@ func Build(cfg config.App) (*App, error) {
 		return nil, err
 	}
 
-	// Servicios de dominio (implementan las interfaces del dominio)
+	// Servicios de dominio
 	userEvents := userService.NewUserEventService(log, kp, cfg.Kafka.TopicUsersCreated)
 	userNotify := userService.NewUserNotifyService(log, rp, cfg.Rabbit.Queue, cfg.Rabbit.TTLms)
 
 	// Repo
 	userRepo := repository.NewUserGormRepository(db)
 
-	// Use cases (no cambiaron)
+	// Use cases
 	create := &useruc.Creator{Repo: userRepo, Publisher: userEvents}
 	get := &useruc.Getter{Repo: userRepo}
 	list := &useruc.Lister{Repo: userRepo}
@@ -72,7 +82,7 @@ func Build(cfg config.App) (*App, error) {
 		Notify: notify,
 	}
 
-	router := NewRouter(log, handlers)
+	router := NewRouter(log, authMW, handlers)
 
 	srv := &http.Server{
 		Addr:    cfg.HTTP.Port,

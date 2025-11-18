@@ -15,3 +15,7 @@ rabbit:
   url: ""
   queue: "user.notify"
   ttlms: 60000
+
+auth:
+  domain: ""
+  audience: ""

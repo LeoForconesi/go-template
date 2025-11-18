@@ -10,8 +10,9 @@ import (
 	"github.com/LeonardoForconesi/go-template/internal/server/middleware"
 )
 
-func NewRouter(log *zap.Logger, h *v1.UserHandlers) *gin.Engine {
+func NewRouter(log *zap.Logger, authMw gin.HandlerFunc, h *v1.UserHandlers) *gin.Engine {
 	r := gin.New()
+
 	// Middlewares globales
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recovery(log))
@@ -21,6 +22,9 @@ func NewRouter(log *zap.Logger, h *v1.UserHandlers) *gin.Engine {
 
 	api := r.Group("/api")
 	v := api.Group("/v1")
+
+	v.Use(authMw)
+
 	h.Register(v)
 
 	// Health
